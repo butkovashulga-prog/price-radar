@@ -344,11 +344,30 @@ DISCOVERY_SOURCES = [
 ]
 
 
+def _query_words(query):
+    return [w for w in re.findall(r"[\w']+", query.lower(), re.UNICODE) if len(w) >= 3]
+
+
+def _link_text(a):
+    """Текст, за яким звіряємо релевантність посилання: сам текст посилання,
+    title/alt картинки та текст найближчого батьківського блоку (картка товару)."""
+    parts = [a.get_text(" ", strip=True), a.get("title", "")]
+    img = a.find("img")
+    if img:
+        parts.append(img.get("alt", ""))
+    parent = a.find_parent(["li", "div", "article"])
+    if parent:
+        parts.append(parent.get_text(" ", strip=True)[:250])
+    return " ".join(p for p in parts if p).lower()
+
+
 def discover_links(source, query):
-    """Заходить на сторінку пошуку магазину і повертає знайдені посилання
-    на товари (максимум source['max_links']). Пробує шаблони адрес по черзі,
-    поки один не спрацює."""
+    """Заходить на сторінку пошуку магазину і повертає посилання на товари,
+    чий текст перегукується із запитом (щоб не хапати випадкові рекомендовані
+    товари з бокових блоків). Пробує шаблони адрес по черзі, поки один не
+    спрацює."""
     q = quote_plus(query)
+    query_words = _query_words(query)
     for template in source["search_urls"]:
         search_url = template.format(q=q)
         try:
@@ -363,9 +382,15 @@ def discover_links(source, query):
             abs_url = urljoin(search_url, a["href"])
             if source["domain"] not in abs_url:
                 continue
-            if any(re.search(p, abs_url) for p in source["link_patterns"]):
-                if abs_url not in found:
-                    found.append(abs_url)
+            if not any(re.search(p, abs_url) for p in source["link_patterns"]):
+                continue
+
+            text = _link_text(a)
+            if query_words and not any(w in text for w in query_words):
+                continue
+
+            if abs_url not in found:
+                found.append(abs_url)
             if len(found) >= source["max_links"]:
                 break
         if found:
