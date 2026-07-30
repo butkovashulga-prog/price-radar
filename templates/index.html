@@ -85,6 +85,27 @@ button:active{transform:translateY(1px)}
 .btn-ghost:hover{color:var(--text);border-color:var(--muted)}
 .hint{color:var(--muted);font-size:13px}
 
+.search-row{display:flex;gap:10px;flex-wrap:wrap}
+.search-row input{
+  flex:1;min-width:220px;
+  background:var(--panel-2);
+  border:1px solid var(--line);
+  border-radius:8px;
+  color:var(--text);
+  font-family:'IBM Plex Sans',sans-serif;
+  font-size:14px;
+  padding:12px 14px;
+}
+.search-row input:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:transparent}
+.card .hint{margin-top:10px}
+
+.or-divider{
+  display:flex;align-items:center;gap:14px;
+  margin:22px 0;color:var(--muted);font-size:13px;
+  text-transform:uppercase;letter-spacing:.06em;
+}
+.or-divider::before,.or-divider::after{content:"";flex:1;height:1px;background:var(--line)}
+
 /* ---------- статус ---------- */
 #status{margin:20px 0 0;font-size:14px;color:var(--muted);min-height:22px}
 #status.scanning::before{
@@ -138,6 +159,17 @@ footer{margin-top:40px;color:var(--muted);font-size:13px}
   <div class="scan-line" aria-hidden="true"></div>
 
   <div class="card">
+    <label for="query">Назва товару <span>— сам знайде пропозиції в кількох магазинах</span></label>
+    <div class="search-row">
+      <input type="text" id="query" placeholder="акумулятор dewalt dcb182" spellcheck="false">
+      <button class="btn-primary" id="searchBtn">Знайти</button>
+    </div>
+    <p class="hint">Шукає в Rozetka, Prom.ua, Дніпро-М, Епіцентр, Bosch-online, Makita.market, Hotline.ua. Деякі магазини іноді не відповідають — це нормально, важливо що інші спрацюють.</p>
+  </div>
+
+  <div class="or-divider"><span>або встав лінки вручну</span></div>
+
+  <div class="card">
     <label for="links">Посилання на сторінки товарів <span>— по одному в рядку</span></label>
     <textarea id="links" placeholder="https://rozetka.com.ua/...&#10;https://dnipro-m.ua/tovar/...&#10;https://makita.market/..." spellcheck="false"></textarea>
     <div class="actions">
@@ -175,8 +207,10 @@ footer{margin-top:40px;color:var(--muted);font-size:13px}
 
 <script>
 const $links  = document.getElementById('links');
+const $query  = document.getElementById('query');
 const $status = document.getElementById('status');
 const $scan   = document.getElementById('scanBtn');
+const $search = document.getElementById('searchBtn');
 const $clear  = document.getElementById('clearBtn');
 const $export = document.getElementById('exportBtn');
 const $results= document.getElementById('results');
@@ -258,6 +292,42 @@ $scan.addEventListener('click', async () => {
     $status.textContent = 'Не вдалося зібрати дані: ' + e.message;
   }finally{
     $scan.disabled = false;
+  }
+});
+
+$search.addEventListener('click', async () => {
+  const query = $query.value.trim();
+  if(!query){
+    $status.textContent = 'Введіть назву товару.';
+    return;
+  }
+  $search.disabled = true;
+  $status.className = 'scanning';
+  $status.textContent = `Шукаю «${query}» у кількох магазинах…`;
+
+  try{
+    const resp = await fetch('/api/search', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({query})
+    });
+    const data = await resp.json();
+    if(!resp.ok) throw new Error(data.error || 'Помилка сервера');
+
+    if(!data.results.length){
+      $status.className = '';
+      $status.textContent = data.message || 'Нічого не знайдено.';
+      return;
+    }
+    render(data.results);
+    const ok = data.results.filter(r => r.price != null).length;
+    $status.className = '';
+    $status.textContent = `Готово: знайдено ${data.results.length} пропозицій, ціни визначено у ${ok}.`;
+  }catch(e){
+    $status.className = '';
+    $status.textContent = 'Не вдалося виконати пошук: ' + e.message;
+  }finally{
+    $search.disabled = false;
   }
 });
 
