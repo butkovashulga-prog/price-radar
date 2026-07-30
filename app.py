@@ -1,12 +1,18 @@
+# -*- coding: utf-8 -*-
 """
 Price Radar — моніторинг цін конкурентів.
 Бекенд: приймає список URL, витягує назву, ціну, стару ціну, наявність.
+
+Стратегія парсингу (від надійного до запасного):
+  1. JSON-LD (schema.org Product) — є на Rozetka, Дніпро-М і більшості магазинів
+  2. Мета-теги (og:price:amount, product:price:amount, itemprop=price)
+  3. Селектори під конкретні магазини (OpenCart-теми: bosch-online, makita.market)
 """
 
 import json
 import re
 import concurrent.futures
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urljoin, quote_plus
 
 import requests
 from bs4 import BeautifulSoup
@@ -45,12 +51,14 @@ def clean_price(value):
     text = re.sub(r"[^\d.,]", "", text)
     if not text:
         return None
+    # 1.234,56 (кома як десятковий роздільник) -> 1234.56
     if "," in text and "." in text:
         if text.rfind(",") > text.rfind("."):
             text = text.replace(".", "").replace(",", ".")
         else:
             text = text.replace(",", "")
     elif "," in text:
+        # 2999,50 -> 2999.50 ; 2,999 -> 2999
         parts = text.split(",")
         if len(parts[-1]) == 2:
             text = text.replace(",", ".")
@@ -70,7 +78,10 @@ def normalize_availability(value):
     return AVAILABILITY_MAP.get(key, str(value))
 
 
+# ---------------------------------------------------------------- JSON-LD ----
+
 def walk_jsonld(node):
+    """Рекурсивно шукає об'єкт Product у структурі JSON-LD."""
     if isinstance(node, list):
         for item in node:
             found = walk_jsonld(item)
@@ -108,6 +119,7 @@ def parse_jsonld(soup):
         if isinstance(offers, list):
             offers = offers[0] if offers else {}
         if isinstance(offers, dict):
+            # AggregateOffer має lowPrice замість price
             result["price"] = clean_price(
                 offers.get("price") or offers.get("lowPrice")
             )
@@ -119,6 +131,8 @@ def parse_jsonld(soup):
             return result
     return None
 
+
+# ------------------------------------------------------------- Мета-теги ----
 
 def parse_meta(soup):
     result = {}
@@ -145,7 +159,10 @@ def parse_meta(soup):
     return result if result.get("price") else None
 
 
+# --------------------------------------------- Селектори під магазини -------
+
 STORE_SELECTORS = {
+    # OpenCart-теми (bosch-online.kiev.ua, makita.market та схожі)
     "default": {
         "price": [
             ".product-price .price-new", ".price-new",
@@ -196,7 +213,10 @@ def parse_selectors(soup):
     return result if result.get("price") else None
 
 
+# -------------------------------------------------- Стара ціна (знижка) -----
+
 def find_old_price(soup, current_price):
+    """Шукає закреслену/стару ціну, вищу за поточну."""
     candidates = []
     for sel in (".price-old", "s", "del", '[class*="old"]', '[class*="discount"]'):
         for el in soup.select(sel):
@@ -208,6 +228,8 @@ def find_old_price(soup, current_price):
                 candidates.append(price)
     return min(candidates) if candidates else None
 
+
+# ------------------------------------------------------------ Оркестрація ---
 
 def parse_url(url):
     store = urlparse(url).netloc.replace("www.", "")
@@ -249,9 +271,139 @@ def parse_url(url):
     return result
 
 
+# --------------------------------------------------- Пошук за назвою --------
+# Для кожного магазину: адреса пошуку (шаблон із {q}) та ознака, за якою
+# з результатів пошуку впізнається посилання саме на сторінку товару.
+# Якщо перший шаблон адреси не спрацював (сайт міг змінити структуру) —
+# пробуємо запасний. Якщо магазин зовсім не відповів — він просто
+# пропускається, це не ламає пошук по інших магазинах.
+DISCOVERY_SOURCES = [
+    {
+        "name": "Rozetka",
+        "domain": "rozetka.com.ua",
+        "search_urls": ["https://rozetka.com.ua/ua/search/?text={q}"],
+        "link_patterns": [r"/p\d+/?($|[?#])"],
+        "max_links": 2,
+    },
+    {
+        "name": "Prom.ua",
+        "domain": "prom.ua",
+        "search_urls": [
+            "https://prom.ua/ua/search?search_term={q}",
+            "https://prom.ua/search?search_term={q}",
+        ],
+        "link_patterns": [r"/ua/p\d+-", r"/p\d+-"],
+        "max_links": 2,
+    },
+    {
+        "name": "Дніпро-М",
+        "domain": "dnipro-m.ua",
+        "search_urls": [
+            "https://dnipro-m.ua/search/?search={q}",
+            "https://dnipro-m.ua/ua/search/?search={q}",
+        ],
+        "link_patterns": [r"/tovar/[^/]+/?$"],
+        "max_links": 2,
+    },
+    {
+        "name": "Epicentrk",
+        "domain": "epicentrk.ua",
+        "search_urls": [
+            "https://epicentrk.ua/ua/search/?text={q}",
+            "https://epicentrk.ua/search/?text={q}",
+        ],
+        "link_patterns": [r"/(ua/)?shop/[^/]+\.html"],
+        "max_links": 2,
+    },
+    {
+        "name": "Bosch-online",
+        "domain": "bosch-online.kiev.ua",
+        "search_urls": [
+            "https://www.bosch-online.kiev.ua/index.php?route=product/search&search={q}",
+        ],
+        "link_patterns": [r"/p\d+/"],
+        "max_links": 2,
+    },
+    {
+        "name": "Makita.market",
+        "domain": "makita.market",
+        "search_urls": [
+            "https://makita.market/search?search={q}",
+            "https://makita.market/index.php?route=product/search&search={q}",
+        ],
+        "link_patterns": [r"/[a-z0-9-]+$"],
+        "max_links": 2,
+    },
+    {
+        "name": "Hotline.ua",
+        "domain": "hotline.ua",
+        "search_urls": ["https://hotline.ua/ua/search/?query={q}"],
+        "link_patterns": [r"/ua/[a-z0-9-]+/[a-z0-9-]+/?$"],
+        "max_links": 2,
+    },
+]
+
+
+def discover_links(source, query):
+    """Заходить на сторінку пошуку магазину і повертає знайдені посилання
+    на товари (максимум source['max_links']). Пробує шаблони адрес по черзі,
+    поки один не спрацює."""
+    q = quote_plus(query)
+    for template in source["search_urls"]:
+        search_url = template.format(q=q)
+        try:
+            resp = requests.get(search_url, headers=HEADERS, timeout=TIMEOUT)
+            resp.raise_for_status()
+        except requests.exceptions.RequestException:
+            continue
+
+        soup = BeautifulSoup(resp.text, "lxml")
+        found = []
+        for a in soup.find_all("a", href=True):
+            abs_url = urljoin(search_url, a["href"])
+            if source["domain"] not in abs_url:
+                continue
+            if any(re.search(p, abs_url) for p in source["link_patterns"]):
+                if abs_url not in found:
+                    found.append(abs_url)
+            if len(found) >= source["max_links"]:
+                break
+        if found:
+            return found
+    return []
+
+
 @app.route("/")
 def index():
     return render_template("index.html")
+
+
+@app.route("/api/search", methods=["POST"])
+def api_search():
+    payload = request.get_json(silent=True) or {}
+    query = (payload.get("query") or "").strip()
+    if not query:
+        return jsonify({"error": "Введіть назву товару для пошуку"}), 400
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=len(DISCOVERY_SOURCES)) as pool:
+        discovered = list(pool.map(lambda s: discover_links(s, query), DISCOVERY_SOURCES))
+
+    urls = []
+    for links in discovered:
+        for url in links:
+            if url not in urls:
+                urls.append(url)
+
+    if not urls:
+        return jsonify({
+            "results": [],
+            "message": "Жоден магазин не повернув результатів за цим запитом. "
+                       "Спробуйте точнішу назву (з моделлю) або встав лінки вручну.",
+        })
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=8) as pool:
+        results = list(pool.map(parse_url, urls))
+    return jsonify({"results": results})
 
 
 @app.route("/api/parse", methods=["POST"])
@@ -259,7 +411,7 @@ def api_parse():
     payload = request.get_json(silent=True) or {}
     urls = payload.get("urls", [])
     urls = [u.strip() for u in urls if isinstance(u, str) and u.strip().startswith("http")]
-    urls = list(dict.fromkeys(urls))[:30]
+    urls = list(dict.fromkeys(urls))[:30]  # унікальні, максимум 30 за раз
     if not urls:
         return jsonify({"error": "Додайте хоча б одне коректне посилання"}), 400
 
