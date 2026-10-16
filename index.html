@@ -1,0 +1,1222 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LPP Ukraine — UTM генератор</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Montserrat', -apple-system, sans-serif;
+    background: #f5f3ee;
+    color: #1a1a1a;
+    min-height: 100vh;
+    padding: 2rem 1rem;
+    line-height: 1.5;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; }
+  .header {
+    margin-bottom: 2.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 2px solid #1a1a1a;
+  }
+  .brand {
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: #f35653;
+    margin-bottom: 0.5rem;
+  }
+  h1 {
+    font-size: 2rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    margin-bottom: 0.5rem;
+  }
+  .subtitle { font-size: 0.9rem; color: #666; max-width: 520px; }
+
+  .mode-switcher {
+    display: flex;
+    background: #fff;
+    border: 1px solid #e2ddd6;
+    border-radius: 8px;
+    padding: 4px;
+    margin-bottom: 1.5rem;
+    gap: 4px;
+  }
+  .mode-btn {
+    flex: 1;
+    padding: 0.85rem 1rem;
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    color: #666;
+    transition: all 0.2s;
+  }
+  .mode-btn:hover { color: #1a1a1a; }
+  .mode-btn.active {
+    background: #1a1a1a;
+    color: #fff;
+  }
+
+  .card {
+    background: #fff;
+    border: 1px solid #e2ddd6;
+    border-radius: 8px;
+    padding: 1.75rem;
+    margin-bottom: 1.5rem;
+  }
+  .card.hidden { display: none; }
+  .section-title {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #f35653;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid #f0ede6;
+  }
+  .section-title .optional {
+    color: #888;
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: 0;
+    margin-left: 0.5rem;
+    font-size: 0.7rem;
+  }
+  .field { margin-bottom: 1.25rem; }
+  .field:last-child { margin-bottom: 0; }
+  .row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+  }
+  .row:last-child { margin-bottom: 0; }
+  @media (max-width: 600px) { .row { grid-template-columns: 1fr; } }
+  label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #1a1a1a;
+    margin-bottom: 0.5rem;
+  }
+  label .hint {
+    color: #888;
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: 0;
+    margin-left: 0.5rem;
+  }
+  label .req {
+    color: #f35653;
+    margin-left: 0.25rem;
+  }
+  input[type="text"], select {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 1px solid #e2ddd6;
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 0.9rem;
+    background: #fff;
+    color: #1a1a1a;
+    transition: border-color 0.2s;
+  }
+  input[type="text"]:focus, select:focus { outline: none; border-color: #f35653; }
+  input:disabled, select:disabled { background: #f5f3ee; color: #999; cursor: not-allowed; }
+  select {
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%231a1a1a' d='M6 8L0 0h12z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 1rem center;
+    padding-right: 2.5rem;
+  }
+  .translit-preview {
+    margin-top: 0.4rem;
+    font-family: 'Courier New', monospace;
+    font-size: 0.75rem;
+    color: #888;
+    min-height: 1rem;
+  }
+  .translit-preview strong { color: #f35653; font-weight: 700; }
+  .fixed-url {
+    background: #f5f3ee;
+    padding: 0.75rem 1rem;
+    border-radius: 6px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.8rem;
+    color: #666;
+    word-break: break-all;
+    border-left: 3px solid #888;
+  }
+  .campaign-preview {
+    background: #f5f3ee;
+    padding: 0.75rem 1rem;
+    border-radius: 6px;
+    margin-top: 0.75rem;
+    font-family: 'Courier New', monospace;
+    font-size: 0.8rem;
+    color: #1a1a1a;
+    word-break: break-all;
+    border-left: 3px solid #f35653;
+  }
+  .campaign-preview-label {
+    display: block;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #888;
+    margin-bottom: 0.3rem;
+  }
+  .btn {
+    width: 100%;
+    padding: 0.85rem 1.5rem;
+    border: none;
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-primary { background: #1a1a1a; color: #fff; }
+  .btn-primary:hover { background: #f35653; }
+  .result {
+    background: #1a1a1a;
+    color: #fff;
+    padding: 1.5rem;
+    border-radius: 8px;
+    margin-top: 1.5rem;
+    display: none;
+  }
+  .result.show { display: block; }
+  .result-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #f35653;
+    margin-bottom: 0.75rem;
+  }
+  .result-url {
+    font-family: 'Courier New', monospace;
+    font-size: 0.8rem;
+    word-break: break-all;
+    line-height: 1.6;
+    padding: 1rem;
+    background: rgba(255,255,255,0.08);
+    border-radius: 6px;
+    margin-bottom: 1rem;
+    color: #fff;
+  }
+  .result-params {
+    font-size: 0.7rem;
+    color: rgba(255,255,255,0.6);
+    margin-bottom: 1rem;
+    font-family: 'Courier New', monospace;
+    line-height: 1.8;
+  }
+  .result-params span { color: #f35653; }
+  .result-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+  .result-actions button {
+    flex: 1;
+    padding: 0.7rem;
+    background: #fff;
+    color: #1a1a1a;
+    border: none;
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .result-actions button:hover { background: #f35653; color: #fff; }
+  .error {
+    background: #fef1f0;
+    color: #c22;
+    border: 1px solid #f5c5c0;
+    padding: 0.75rem 1rem;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    margin-top: 1rem;
+    display: none;
+  }
+  .error.show { display: block; }
+  .success-msg {
+    color: #0a7;
+    font-size: 0.8rem;
+    margin-top: 0.5rem;
+    min-height: 1.2rem;
+    text-align: center;
+  }
+  .history-card {
+    background: #fff;
+    border: 1px solid #e2ddd6;
+    border-radius: 8px;
+    padding: 1.75rem;
+  }
+  .history-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+  }
+  .history-title {
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .clear-btn {
+    background: none;
+    border: none;
+    color: #888;
+    font-family: inherit;
+    font-size: 0.75rem;
+    cursor: pointer;
+    text-decoration: underline;
+  }
+  .clear-btn:hover { color: #f35653; }
+  .history-empty {
+    font-size: 0.85rem;
+    color: #888;
+    padding: 1rem 0;
+    text-align: center;
+  }
+  .history-item {
+    padding: 0.75rem 0;
+    border-bottom: 1px solid #f0ede6;
+  }
+  .history-item:last-child { border-bottom: none; }
+  .history-meta {
+    display: flex;
+    gap: 0.4rem;
+    margin-bottom: 0.4rem;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .tag {
+    display: inline-block;
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 2px 8px;
+    border-radius: 3px;
+  }
+  .tag-source { background: #1a1a1a; color: #fff; }
+  .tag-recruiter { background: #6b3fa0; color: #fff; }
+  .tag-campaign { background: #f35653; color: #fff; }
+  .tag-city { background: #3d52f0; color: #fff; }
+  .tag-date { background: #f5f3ee; color: #666; }
+  .history-url {
+    font-family: 'Courier New', monospace;
+    font-size: 0.7rem;
+    color: #666;
+    word-break: break-all;
+    margin-bottom: 0.5rem;
+    line-height: 1.5;
+  }
+  .history-short {
+    font-family: 'Courier New', monospace;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #1a1a1a;
+    margin-bottom: 0.5rem;
+  }
+  .history-actions { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+  .history-actions button {
+    background: none;
+    border: 1px solid #e2ddd6;
+    padding: 0.35rem 0.75rem;
+    border-radius: 4px;
+    font-family: inherit;
+    font-size: 0.7rem;
+    font-weight: 600;
+    cursor: pointer;
+    color: #1a1a1a;
+  }
+  .history-actions button:hover { border-color: #1a1a1a; background: #1a1a1a; color: #fff; }
+  .history-actions .del:hover { border-color: #c22; background: #c22; color: #fff; }
+  .history-search {
+    width: 100%;
+    padding: 0.6rem 1rem;
+    border: 1px solid #e2ddd6;
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 0.85rem;
+    margin-bottom: 1rem;
+  }
+  .export-bar {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #f0ede6;
+  }
+  .export-bar button {
+    flex: 1;
+    padding: 0.6rem;
+    background: transparent;
+    border: 1px solid #e2ddd6;
+    border-radius: 4px;
+    font-family: inherit;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+  }
+  .export-bar button:hover { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
+  .footer {
+    text-align: center;
+    font-size: 0.7rem;
+    color: #888;
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid #e2ddd6;
+  }
+  @media (max-width: 600px) {
+    body { padding: 1rem 0.75rem; }
+    h1 { font-size: 1.5rem; }
+    .card, .history-card { padding: 1.25rem; }
+    .result { padding: 1rem; }
+    .mode-btn { font-size: 0.7rem; padding: 0.7rem 0.5rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <div class="header">
+    <div class="brand">LPP Ukraine · Recruitment</div>
+    <h1>UTM генератор</h1>
+    <p class="subtitle">Генератор посилань з мітками для відстеження джерел трафіку в Google Analytics</p>
+  </div>
+
+  <div class="mode-switcher">
+    <button class="mode-btn active" data-mode="vacancy">На конкретну вакансію</button>
+    <button class="mode-btn" data-mode="general">На кар'єрний сайт</button>
+  </div>
+
+  <div class="card" id="urlCard">
+    <div class="section-title">1. Базове посилання</div>
+    <div class="field" id="urlInputField">
+      <label>Посилання на вакансію</label>
+      <input type="text" id="baseUrl" placeholder="https://lpp-sa.peopleforce.io/careers/v/...">
+    </div>
+    <div class="field" id="urlFixedField" style="display:none;">
+      <label>Кар'єрний сайт</label>
+      <div class="fixed-url">https://lpp-sa.peopleforce.io/careers</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="section-title">2. Канал і рекрутер</div>
+    <div class="field">
+      <label>Канал публікації</label>
+      <select id="channel">
+        <optgroup label="LinkedIn">
+          <option value="linkedin|social|company">Пост зі сторінки компанії</option>
+          <option value="linkedin|personal|recruiter" selected>Пост зі сторінки рекрутера</option>
+          <option value="linkedin|inmail|direct">InMail / повідомлення</option>
+          <option value="linkedin|bio|evergreen">Лінк у біо / профілі</option>
+        </optgroup>
+        <optgroup label="Telegram">
+          <option value="telegram|social|channel">Канал LPP Ukraine</option>
+          <option value="telegram|personal|chat">Особистий чат / група</option>
+        </optgroup>
+        <optgroup label="Instagram">
+          <option value="instagram|social|post">Пост</option>
+          <option value="instagram|story|story">Сторіс</option>
+          <option value="instagram|bio|evergreen">Лінк у біо</option>
+        </optgroup>
+        <optgroup label="Інші соцмережі">
+          <option value="threads|social|post">Threads — пост</option>
+          <option value="facebook|social|post">Facebook — пост</option>
+          <option value="tiktok|social|post">TikTok — пост</option>
+        </optgroup>
+        <optgroup label="Джоб-борди">
+          <option value="robota_ua|jobboard|listing">robota.ua</option>
+          <option value="work_ua|jobboard|listing">work.ua</option>
+          <option value="olx|jobboard|listing">OLX</option>
+          <option value="pidbir|jobboard|listing">pidbir</option>
+          <option value="injobe|jobboard|listing">injobe</option>
+          <option value="djinni|jobboard|listing">djinni.co</option>
+          <option value="grc_ua|jobboard|listing">grc.ua</option>
+          <option value="jooble|jobboard|listing">jooble.org</option>
+        </optgroup>
+        <optgroup label="Email">
+          <option value="email|newsletter|blast">Розсилка</option>
+          <option value="email|signature|evergreen">Підпис у листах</option>
+        </optgroup>
+        <optgroup label="🎪 Фестиваль кар'єри">
+          <option value="festival_leaflet|leaflet|festival">Листівки — Фестиваль</option>
+          <option value="festival_stand|stand|festival">Стенд — Фестиваль</option>
+          <option value="festival_lecture|stand|festival">Лекція — Фестиваль</option>
+        </optgroup>
+        <optgroup label="💬 Месенджери">
+          <option value="viber|messenger|broadcast">Viber</option>
+          <option value="telegram|messenger|chat">Telegram</option>
+          <option value="whatsapp|messenger|chat">WhatsApp</option>
+        </optgroup>
+        <optgroup label="📍 Офлайн / QR">
+          <option value="qr_store|qr|store">QR code — магазин</option>
+          <option value="qr_office|qr|office">QR code — офіс</option>
+          <option value="qr_vuzy|qr|education">ВУЗи</option>
+          <option value="offline|qr|print">QR-код / листівка</option>
+          <option value="receipt|offline|store">Чек — магазин</option>
+          <option value="square_frame|offline|store">Квадрат (рамка / стікер)</option>
+          <option value="poster_cashier|offline|store">Постер на касі</option>
+          <option value="fitting_room|offline|store">Fitting room</option>
+          <option value="micro_cv|offline|store">Мікро CV</option>
+          <option value="referral|partner|community">Партнер / HR-спільнота</option>
+          <option value="referral|employee|recommendation">Рекомендація співробітника</option>
+        </optgroup>
+        <optgroup label="🛍️ Додатки та сайти брендів">
+          <option value="reserved_app|brand_app|reserved">Reserved — додаток</option>
+          <option value="reserved_site|brand_site|reserved">Reserved — сайт</option>
+          <option value="mohito_app|brand_app|mohito">Mohito — додаток</option>
+          <option value="mohito_site|brand_site|mohito">Mohito — сайт</option>
+          <option value="cropp_app|brand_app|cropp">Cropp — додаток</option>
+          <option value="cropp_site|brand_site|cropp">Cropp — сайт</option>
+          <option value="house_app|brand_app|house">House — додаток</option>
+          <option value="house_site|brand_site|house">House — сайт</option>
+          <option value="sinsay_app|brand_app|sinsay">Sinsay — додаток</option>
+          <option value="sinsay_site|brand_site|sinsay">Sinsay — сайт</option>
+        </optgroup>
+      </select>
+    </div>
+
+    <div class="field">
+      <label id="recruiterLabel">Власник посилання <span class="req" id="recruiterReq">*</span></label>
+      <select id="recruiter">
+        <option value="">— обери —</option>
+        <option value="_store_qr" id="recruiterStoreQR" style="display:none;">📍 Магазин (без рекрутера)</option>
+        <optgroup label="Рекрутери">
+          <option value="olena_kovalevska">Олена Ковалевська</option>
+          <option value="ihor_mykhailenko">Ігор Михайленко</option>
+          <option value="khrystyna_buriak">Христина Буряк</option>
+          <option value="mariana_antoniv">Марʼяна Антонів</option>
+          <option value="yuliia_dzhemesiuk">Юлія Джемесюк</option>
+          <option value="yana_shulha">Яна Шульга</option>
+        </optgroup>
+        <optgroup label="Загальні">
+          <option value="hr_team">HR команда — загальний</option>
+        </optgroup>
+      </select>
+    </div>
+  </div>
+
+  <div class="card" id="campaignCard">
+    <div class="section-title">3. Конструктор кампанії <span class="optional" id="campaignOptional" style="display:none;">— все необов'язкове</span></div>
+
+    <div class="row">
+      <div>
+        <label>Департамент</label>
+        <select id="department">
+          <option value="">— обери —</option>
+          <option value="stores">Stores — магазини</option>
+          <option value="office">Office — офіс</option>
+        </select>
+      </div>
+      <div>
+        <label>Підрозділ</label>
+        <select id="division" disabled>
+          <option value="">— спочатку департамент —</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="row">
+      <div>
+        <label>Місто <span class="hint">українською</span></label>
+        <input type="text" id="city" placeholder="Львів">
+        <div class="translit-preview" id="cityPreview"></div>
+      </div>
+      <div>
+        <label>Рік</label>
+        <select id="year"></select>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Посада <span class="hint">українською, транслітерація автоматична</span></label>
+      <input type="text" id="position" placeholder="Продавець-консультант">
+      <div class="translit-preview" id="positionPreview"></div>
+    </div>
+
+    <div class="campaign-preview" id="campaignPreview" style="display:none;">
+      <span class="campaign-preview-label">Так виглядатиме utm_campaign</span>
+      <span id="campaignPreviewText"></span>
+    </div>
+  </div>
+
+  <div class="card">
+    <button class="btn btn-primary" id="generateBtn">Згенерувати посилання</button>
+    <div class="error" id="errorMsg"></div>
+    <div class="result" id="result">
+      <div class="result-label">Готове посилання</div>
+      <div class="result-url" id="resultUrl"></div>
+      <div id="shortUrlBlock" style="display:none;margin-top:0.75rem;padding:0.75rem 1rem;background:rgba(255,255,255,0.08);border-radius:6px;">
+        <div style="font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#f35653;margin-bottom:0.4rem;">Коротке посилання</div>
+        <div id="shortUrlText" style="font-family:'Courier New',monospace;font-size:1rem;font-weight:700;color:#fff;word-break:break-all;margin-bottom:0.5rem;"></div>
+      </div>
+      <div id="shortUrlStatus" style="font-size:0.75rem;color:rgba(255,255,255,0.55);margin-top:0.5rem;display:none;min-height:1rem;"></div>
+      <div class="result-params" id="resultParams"></div>
+      <div class="result-actions">
+        <button id="copyBtn">Копіювати повний</button>
+        <button id="copyShortBtn" style="display:none;">Копіювати короткий</button>
+        <button id="openBtn">Відкрити</button>
+        <button id="qrBtn">QR-код</button>
+      </div>
+      <div class="success-msg" id="successMsg"></div>
+    </div>
+  </div>
+
+  <div class="history-card">
+    <div class="history-header">
+      <div class="history-title">Історія посилань</div>
+      <button class="clear-btn" id="clearBtn">Очистити все</button>
+    </div>
+    <input type="text" class="history-search" id="historySearch" placeholder="Пошук по історії...">
+    <div id="historyList"></div>
+    <div class="export-bar">
+      <button id="exportCsv">Експорт у CSV</button>
+      <button id="exportJson">Експорт у JSON</button>
+    </div>
+  </div>
+
+  <div class="footer">
+    LPP Ukraine · Recruitment Team · дані зберігаються локально в браузері
+  </div>
+
+</div>
+
+<script>
+(function() {
+  var STORAGE_KEY = 'lpp_utm_history_v3';
+  var GENERAL_URL = 'https://lpp-sa.peopleforce.io/careers';
+  var history = [];
+  var currentMode = 'vacancy';
+  var shortenSeq = 0;
+
+  var divisions = {
+    stores: [
+      { v: 'reserved', l: 'Reserved' },
+      { v: 'mohito', l: 'Mohito' },
+      { v: 'cropp', l: 'Cropp' },
+      { v: 'house', l: 'House' },
+      { v: 'sinsay', l: 'Sinsay' }
+    ],
+    office: [
+      { v: 'hr', l: 'HR Department' },
+      { v: 'it', l: 'IT Department' },
+      { v: 'logistics', l: 'Logistic Department' },
+      { v: 'marketing', l: 'Marketing Department' },
+      { v: 'control_development', l: 'Control & Development Department' },
+      { v: 'accounting', l: 'Accounting Department' },
+      { v: 'administrative', l: 'Administrative Department' },
+      { v: 'investment', l: 'Investment Department' },
+      { v: 'technical_support', l: 'Technical Support Department' },
+      { v: 'leasing_sinsay', l: 'Leasing Sinsay Department' },
+      { v: 'rsm', l: 'RSM Department' },
+      { v: 'legal', l: 'Legal Department' },
+      { v: 'personnel_administration', l: 'Personnel Administration Department' },
+      { v: 'procurement', l: 'Procurement Department' },
+      { v: 'merchandise_circulation', l: 'Merchandise Circulation Department' },
+      { v: 'osm', l: 'OSM Department' },
+      { v: 'rvm_rct', l: 'RVM, RCT Department' },
+      { v: 'contact_center', l: 'Contact Center Department' },
+      { v: 'loss_prevention', l: 'Loss Prevention Department' }
+    ]
+  };
+
+  var translitMap = {
+    'а':'a','б':'b','в':'v','г':'h','ґ':'g','д':'d','е':'e','є':'ie',
+    'ж':'zh','з':'z','и':'y','і':'i','ї':'i','й':'i','к':'k','л':'l',
+    'м':'m','н':'n','о':'o','п':'p','р':'r','с':'s','т':'t','у':'u',
+    'ф':'f','х':'kh','ц':'ts','ч':'ch','ш':'sh','щ':'shch','ь':'',
+    'ю':'iu','я':'ia',"'":'','’':'','ʼ':''
+  };
+
+  var translitStart = {
+    'є':'ye','ї':'yi','й':'y','ю':'yu','я':'ya'
+  };
+
+  function transliterate(str) {
+    if (!str) return '';
+    str = str.toLowerCase().trim();
+    var result = '';
+    var atStart = true;
+    for (var i = 0; i < str.length; i++) {
+      var ch = str[i];
+      var mapped;
+      if (atStart && translitStart[ch]) {
+        mapped = translitStart[ch];
+      } else if (translitMap[ch] !== undefined) {
+        mapped = translitMap[ch];
+      } else if (/[a-z0-9]/.test(ch)) {
+        mapped = ch;
+      } else if (/[\s\-_]/.test(ch)) {
+        mapped = '_';
+      } else {
+        mapped = '';
+      }
+      result += mapped;
+      atStart = /[\s\-_]/.test(ch);
+    }
+    result = result.replace(/_+/g, '_').replace(/^_|_$/g, '');
+    return result;
+  }
+
+  function loadHistory() {
+    try {
+      var stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) history = JSON.parse(stored);
+    } catch(e) { history = []; }
+  }
+
+  function saveHistory() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(history)); } catch(e) {}
+  }
+
+  function formatDate(ts) {
+    var d = new Date(ts);
+    var pad = function(n) { return n < 10 ? '0' + n : n; };
+    return pad(d.getDate()) + '.' + pad(d.getMonth() + 1) + '.' + d.getFullYear() + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+  }
+
+  function populateYears() {
+    var sel = document.getElementById('year');
+    var currentYear = new Date().getFullYear();
+    for (var y = currentYear - 1; y <= currentYear + 1; y++) {
+      var opt = document.createElement('option');
+      opt.value = y;
+      opt.textContent = y;
+      if (y === currentYear) opt.selected = true;
+      sel.appendChild(opt);
+    }
+  }
+
+  function updateDivisions() {
+    var dept = document.getElementById('department').value;
+    var divSelect = document.getElementById('division');
+    divSelect.innerHTML = '';
+    if (!dept) {
+      divSelect.disabled = true;
+      divSelect.innerHTML = '<option value="">— спочатку департамент —</option>';
+      updatePreview();
+      return;
+    }
+    divSelect.disabled = false;
+    var placeholder = document.createElement('option');
+    placeholder.value = '';
+    placeholder.textContent = '— обери —';
+    divSelect.appendChild(placeholder);
+    divisions[dept].forEach(function(d) {
+      var opt = document.createElement('option');
+      opt.value = d.v;
+      opt.textContent = d.l;
+      divSelect.appendChild(opt);
+    });
+    updatePreview();
+  }
+
+  function getFormData() {
+    var dept = document.getElementById('department').value;
+    var division = document.getElementById('division').value;
+    var cityRaw = document.getElementById('city').value;
+    var positionRaw = document.getElementById('position').value;
+    var year = document.getElementById('year').value;
+    var recruiter = document.getElementById('recruiter').value;
+    return {
+      dept: dept,
+      division: division,
+      city: transliterate(cityRaw),
+      cityRaw: cityRaw,
+      position: transliterate(positionRaw),
+      positionRaw: positionRaw,
+      year: year,
+      recruiter: recruiter
+    };
+  }
+
+  function buildCampaign(data) {
+    if (currentMode === 'general') {
+      var generalParts = [];
+      if (data.division) generalParts.push(data.division);
+      if (data.position) generalParts.push(data.position);
+      generalParts.push('general');
+      if (data.year) generalParts.push(data.year);
+      return generalParts.join('_');
+    }
+    var parts = [];
+    if (data.division) parts.push(data.division);
+    if (data.position) parts.push(data.position);
+    if (data.year) parts.push(data.year);
+    return parts.join('_');
+  }
+
+  function buildTerm(data) {
+    var parts = [];
+    if (data.dept) parts.push(data.dept);
+    if (data.division) parts.push(data.division);
+    return parts.join('_');
+  }
+
+  function updatePreview() {
+    var data = getFormData();
+
+    document.getElementById('cityPreview').innerHTML = data.cityRaw
+      ? '→ <strong>' + (data.city || '(невірні символи)') + '</strong>'
+      : '';
+    document.getElementById('positionPreview').innerHTML = data.positionRaw
+      ? '→ <strong>' + (data.position || '(невірні символи)') + '</strong>'
+      : '';
+
+    var campaign = buildCampaign(data);
+    var previewBox = document.getElementById('campaignPreview');
+    var previewText = document.getElementById('campaignPreviewText');
+    if (campaign) {
+      previewBox.style.display = 'block';
+      previewText.textContent = campaign;
+    } else {
+      previewBox.style.display = 'none';
+    }
+  }
+
+  function switchMode(mode) {
+    currentMode = mode;
+    document.querySelectorAll('.mode-btn').forEach(function(b) {
+      b.classList.toggle('active', b.getAttribute('data-mode') === mode);
+    });
+    if (mode === 'general') {
+      document.getElementById('urlInputField').style.display = 'none';
+      document.getElementById('urlFixedField').style.display = 'block';
+      document.getElementById('campaignOptional').style.display = 'inline';
+    } else {
+      document.getElementById('urlInputField').style.display = 'block';
+      document.getElementById('urlFixedField').style.display = 'none';
+      document.getElementById('campaignOptional').style.display = 'none';
+    }
+    updatePreview();
+  }
+
+  function showError(msg) {
+    var el = document.getElementById('errorMsg');
+    el.textContent = msg;
+    el.classList.add('show');
+    document.getElementById('result').classList.remove('show');
+  }
+
+  function hideError() {
+    document.getElementById('errorMsg').classList.remove('show');
+  }
+
+  // ---------- Скорочення посилань ----------
+  // TinyURL (api-create.php) не віддає CORS-заголовків, тому браузер блокує
+  // fetch з будь-якого сайту, тому в ланцюжку його немає. is.gd підтримує
+  // JSONP (callback), який працює з будь-якого домену без CORS.
+
+  function shortenIsGd(longUrl) {
+    return new Promise(function(resolve, reject) {
+      var cbName = 'isgdCb_' + Date.now() + '_' + Math.floor(Math.random() * 1e6);
+      var script = document.createElement('script');
+      var done = false;
+      var timer = setTimeout(function() { finish(new Error('timeout')); }, 8000);
+
+      function finish(err, value) {
+        if (done) return;
+        done = true;
+        clearTimeout(timer);
+        // заглушка замість delete: якщо is.gd відповість після таймауту,
+        // його скрипт не впаде з ReferenceError
+        window[cbName] = function() {};
+        if (script.parentNode) script.parentNode.removeChild(script);
+        if (err) reject(err); else resolve(value);
+      }
+
+      window[cbName] = function(data) {
+        if (data && data.shorturl) finish(null, data.shorturl);
+        else finish(new Error((data && data.errormessage) || 'is.gd error'));
+      };
+      script.onerror = function() { finish(new Error('is.gd network error')); };
+      script.src = 'https://is.gd/create.php?format=json&callback=' + cbName +
+        '&url=' + encodeURIComponent(longUrl);
+      document.head.appendChild(script);
+    });
+  }
+
+  function shortenUrl(longUrl) {
+    return shortenIsGd(longUrl);
+  }
+
+  function generate() {
+    hideError();
+    var channelVal = document.getElementById('channel').value;
+    var data = getFormData();
+
+    var base;
+    if (currentMode === 'general') {
+      base = GENERAL_URL;
+    } else {
+      base = document.getElementById('baseUrl').value.trim();
+      if (!base) { showError('Встав базове посилання на вакансію'); return; }
+      if (!/^https?:\/\//.test(base)) { showError('Посилання має починатись з https:// або http://'); return; }
+    }
+
+    var parts = channelVal.split('|');
+    var source = parts[0];
+    var baseMedium = parts[1];
+    var channelContext = parts[2];
+
+    if (!data.recruiter && !isAutoRecruiterChannel(source)) { showError('Обери власника посилання'); return; }
+    if (!data.recruiter && isAutoRecruiterChannel(source)) {
+      data.recruiter = getAutoRecruiter(source);
+    }
+
+    if (currentMode === 'vacancy') {
+      if (!data.dept) { showError('Обери департамент'); return; }
+      if (!data.division) { showError('Обери підрозділ'); return; }
+      if (!data.city) { showError('Впиши місто'); return; }
+      if (!data.position) { showError('Впиши посаду'); return; }
+    }
+
+
+    var medium = baseMedium + '_' + data.recruiter;
+    var campaign = buildCampaign(data) || ('general_' + data.year);
+    var term = buildTerm(data);
+    var content = data.city || 'all';
+
+    var params = [
+      'utm_source=' + encodeURIComponent(source),
+      'utm_medium=' + encodeURIComponent(medium),
+      'utm_campaign=' + encodeURIComponent(campaign),
+      'utm_content=' + encodeURIComponent(content)
+    ];
+    if (term) {
+      params.push('utm_term=' + encodeURIComponent(term));
+    }
+
+    var separator = base.indexOf('?') > -1 ? '&' : '?';
+    var finalUrl = base + separator + params.join('&');
+
+    var recruiterNote = isAutoRecruiterChannel(source) ? ' (авто)' : ' (канал + рекрутер)';
+    document.getElementById('resultUrl').textContent = finalUrl;
+    document.getElementById('resultParams').innerHTML =
+      'source: <span>' + source + '</span><br>' +
+      'medium: <span>' + medium + '</span>' + recruiterNote + '<br>' +
+      'campaign: <span>' + campaign + '</span><br>' +
+      'content: <span>' + content + '</span> (місто)' +
+      (term ? '<br>term: <span>' + term + '</span> (департамент)' : '');
+    document.getElementById('result').classList.add('show');
+    document.getElementById('successMsg').textContent = '';
+
+    var entry = {
+      url: finalUrl,
+      baseUrl: base,
+      mode: currentMode,
+      source: source,
+      medium: medium,
+      baseMedium: baseMedium,
+      recruiter: data.recruiter,
+      channelContext: channelContext,
+      campaign: campaign,
+      city: data.city,
+      cityRaw: data.cityRaw,
+      position: data.position,
+      positionRaw: data.positionRaw,
+      department: data.dept,
+      division: data.division,
+      year: data.year,
+      term: term,
+      timestamp: Date.now()
+    };
+    history.unshift(entry);
+    if (history.length > 200) history.pop();
+    saveHistory();
+    renderHistory();
+
+    // Скорочення
+    var statusEl = document.getElementById('shortUrlStatus');
+    document.getElementById('shortUrlBlock').style.display = 'none';
+    document.getElementById('copyShortBtn').style.display = 'none';
+    statusEl.style.display = 'block';
+    statusEl.textContent = '⏳ Скорочуємо...';
+    // якщо за цей час згенерували інше посилання — не перезаписуємо екран
+    var shortenId = ++shortenSeq;
+    function isCurrent() { return shortenId === shortenSeq; }
+    shortenUrl(finalUrl)
+      .then(function(shortUrl) {
+        if (isCurrent()) {
+          document.getElementById('shortUrlText').textContent = shortUrl;
+          document.getElementById('shortUrlBlock').style.display = 'block';
+          document.getElementById('copyShortBtn').style.display = 'block';
+          statusEl.textContent = '✓ Скорочено';
+          setTimeout(function() { if (isCurrent()) statusEl.style.display = 'none'; }, 2000);
+        }
+        entry.shortUrl = shortUrl;
+        saveHistory();
+        renderHistory();
+      })
+      .catch(function() {
+        if (isCurrent()) statusEl.textContent = '⚠ Не вдалось скоротити — використовуй повне посилання';
+      });
+  }
+
+  function copyToClipboard(text, callback) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function() { if (callback) callback(true); });
+    } else {
+      var textarea = document.createElement('textarea');
+      textarea.value = text;
+      document.body.appendChild(textarea);
+      textarea.select();
+      try { document.execCommand('copy'); if (callback) callback(true); }
+      catch(e) { if (callback) callback(false); }
+      document.body.removeChild(textarea);
+    }
+  }
+
+  function renderHistory() {
+    var list = document.getElementById('historyList');
+    var search = document.getElementById('historySearch').value.toLowerCase().trim();
+    var filtered = search
+      ? history.filter(function(h) {
+          var blob = (h.source + ' ' + h.campaign + ' ' + (h.recruiter || '') + ' ' + (h.city || '') + ' ' + (h.position || '') + ' ' + (h.positionRaw || '') + ' ' + (h.cityRaw || '') + ' ' + h.url + ' ' + (h.shortUrl || '')).toLowerCase();
+          return blob.indexOf(search) > -1;
+        })
+      : history;
+
+    if (filtered.length === 0) {
+      list.innerHTML = '<div class="history-empty">' + (search ? 'Нічого не знайдено' : 'Поки немає створених посилань') + '</div>';
+      return;
+    }
+
+    list.innerHTML = filtered.map(function(h) {
+      var origIdx = history.indexOf(h);
+      return '<div class="history-item">' +
+        '<div class="history-meta">' +
+          '<span class="tag tag-source">' + h.source + '</span>' +
+          (h.recruiter ? '<span class="tag tag-recruiter">' + h.recruiter + '</span>' : '') +
+          '<span class="tag tag-campaign">' + h.campaign + '</span>' +
+          (h.city ? '<span class="tag tag-city">' + h.city + '</span>' : '') +
+          '<span class="tag tag-date">' + formatDate(h.timestamp) + '</span>' +
+        '</div>' +
+        (h.shortUrl ? '<div class="history-short">' + h.shortUrl + '</div>' : '') +
+        '<div class="history-url">' + h.url + '</div>' +
+        '<div class="history-actions">' +
+          '<button data-action="copy" data-idx="' + origIdx + '">Копія</button>' +
+          (h.shortUrl ? '<button data-action="copyShort" data-idx="' + origIdx + '">Копія короткого</button>' : '') +
+          '<button data-action="open" data-idx="' + origIdx + '">Відкрити</button>' +
+          '<button data-action="delete" data-idx="' + origIdx + '" class="del">Видалити</button>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+
+    list.querySelectorAll('button[data-action]').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var action = btn.getAttribute('data-action');
+        var idx = parseInt(btn.getAttribute('data-idx'));
+        var item = history[idx];
+        if (!item) return;
+        if (action === 'copy' || action === 'copyShort') {
+          copyToClipboard(action === 'copy' ? item.url : item.shortUrl, function() {
+            var original = btn.textContent;
+            btn.textContent = '✓ Скопійовано';
+            setTimeout(function() { btn.textContent = original; }, 1500);
+          });
+        } else if (action === 'open') {
+          window.open(item.url, '_blank');
+        } else if (action === 'delete') {
+          if (confirm('Видалити це посилання з історії?')) {
+            history.splice(idx, 1);
+            saveHistory();
+            renderHistory();
+          }
+        }
+      });
+    });
+  }
+
+  function exportCSV() {
+    if (history.length === 0) { alert('Історія порожня'); return; }
+    var headers = ['Дата','Режим','Джерело','Канал','Рекрутер','Департамент','Підрозділ','Місто','Посада','Рік','Кампанія','Базове посилання','Повне посилання','Коротке посилання'];
+    var rows = history.map(function(h) {
+      return [
+        formatDate(h.timestamp),
+        h.mode || '',
+        h.source,
+        h.medium,
+        h.recruiter || '',
+        h.department || '',
+        h.division || '',
+        h.cityRaw || h.city || '',
+        h.positionRaw || h.position || '',
+        h.year || '',
+        h.campaign,
+        h.baseUrl,
+        h.url,
+        h.shortUrl || ''
+      ].map(function(cell) {
+        var s = String(cell).replace(/"/g, '""');
+        return '"' + s + '"';
+      }).join(',');
+    });
+    var csv = '﻿' + headers.join(',') + '\n' + rows.join('\n');
+    var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'lpp-utm-history-' + new Date().toISOString().slice(0,10) + '.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function exportJSON() {
+    if (history.length === 0) { alert('Історія порожня'); return; }
+    var blob = new Blob([JSON.stringify(history, null, 2)], { type: 'application/json' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'lpp-utm-history-' + new Date().toISOString().slice(0,10) + '.json';
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  document.querySelectorAll('.mode-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      switchMode(btn.getAttribute('data-mode'));
+    });
+  });
+
+  // Канали, де рекрутер не потрібен — підставляємо авто-значення
+  var AUTO_RECRUITER_CHANNELS = {
+    'qr_store': 'store_qr',          // QR code магазин
+    'receipt': 'store_offline',      // Чек
+    'square_frame': 'store_offline', // Квадрат / стікер
+    'poster_cashier': 'store_offline', // Постер на касі
+    'fitting_room': 'store_offline', // Fitting room
+    'micro_cv': 'store_offline'      // Мікро CV
+  };
+  var BRAND_CHANNEL_PREFIX = ['reserved_app','reserved_site','mohito_app','mohito_site',
+    'cropp_app','cropp_site','house_app','house_site','sinsay_app','sinsay_site'];
+
+  function isAutoRecruiterChannel(source) {
+    return !!AUTO_RECRUITER_CHANNELS[source] ||
+      BRAND_CHANNEL_PREFIX.indexOf(source) > -1;
+  }
+
+  function getAutoRecruiter(source) {
+    if (AUTO_RECRUITER_CHANNELS[source]) return AUTO_RECRUITER_CHANNELS[source];
+    // для брендових каналів беремо назву бренду як "власника"
+    var brand = source.replace('_app','').replace('_site','');
+    return brand + '_brand';
+  }
+
+  function onChannelChange() {
+    var channelVal = document.getElementById('channel').value;
+    var source = channelVal.split('|')[0];
+    var recruiterSel = document.getElementById('recruiter');
+    var recruiterReq = document.getElementById('recruiterReq');
+    var recruiterLabel = document.getElementById('recruiterLabel');
+
+    if (isAutoRecruiterChannel(source)) {
+      recruiterSel.disabled = true;
+      recruiterSel.value = '';
+      recruiterReq.style.display = 'none';
+      recruiterLabel.querySelector('.hint-auto') && recruiterLabel.querySelector('.hint-auto').remove();
+      var hint = document.createElement('span');
+      hint.className = 'hint hint-auto';
+      hint.textContent = ' — підставляється автоматично';
+      recruiterLabel.appendChild(hint);
+    } else {
+      recruiterSel.disabled = false;
+      recruiterReq.style.display = 'inline';
+      var existingHint = recruiterLabel.querySelector('.hint-auto');
+      if (existingHint) existingHint.remove();
+    }
+  }
+
+  document.getElementById('channel').addEventListener('change', onChannelChange);
+
+  document.getElementById('department').addEventListener('change', updateDivisions);
+
+  document.getElementById('division').addEventListener('change', updatePreview);
+  document.getElementById('city').addEventListener('input', updatePreview);
+  document.getElementById('position').addEventListener('input', updatePreview);
+  document.getElementById('year').addEventListener('change', updatePreview);
+
+  document.getElementById('generateBtn').addEventListener('click', generate);
+  document.getElementById('position').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') generate();
+  });
+
+  document.getElementById('copyBtn').addEventListener('click', function() {
+    var url = document.getElementById('resultUrl').textContent;
+    copyToClipboard(url, function(ok) {
+      document.getElementById('successMsg').textContent = ok ? '✓ Скопійовано — постимо!' : 'Помилка копіювання';
+      setTimeout(function() { document.getElementById('successMsg').textContent = ''; }, 2500);
+    });
+  });
+
+  document.getElementById('copyShortBtn').addEventListener('click', function() {
+    var url = document.getElementById('shortUrlText').textContent;
+    copyToClipboard(url, function(ok) {
+      document.getElementById('successMsg').textContent = ok ? '✓ Коротке посилання скопійовано!' : 'Помилка копіювання';
+      setTimeout(function() { document.getElementById('successMsg').textContent = ''; }, 2500);
+    });
+  });
+
+  document.getElementById('openBtn').addEventListener('click', function() {
+    window.open(document.getElementById('resultUrl').textContent, '_blank');
+  });
+
+  document.getElementById('qrBtn').addEventListener('click', function() {
+    var url = document.getElementById('resultUrl').textContent;
+    window.open('https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=' + encodeURIComponent(url), '_blank');
+  });
+
+  document.getElementById('clearBtn').addEventListener('click', function() {
+    if (history.length === 0) return;
+    if (confirm('Видалити всю історію посилань? Цю дію не можна скасувати.')) {
+      history = [];
+      saveHistory();
+      renderHistory();
+    }
+  });
+
+  document.getElementById('historySearch').addEventListener('input', renderHistory);
+  document.getElementById('exportCsv').addEventListener('click', exportCSV);
+  document.getElementById('exportJson').addEventListener('click', exportJSON);
+
+  populateYears();
+  loadHistory();
+  renderHistory();
+})();
+</script>
+
+</body>
+</html>
